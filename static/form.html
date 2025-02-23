@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Añadir Contraseña</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            margin: 20px;
+            padding: 20px;
+            text-align: center;
+        }
+        .container {
+            display: inline-block;
+            text-align: left;
+            padding: 30px;
+            border: 1px solid #333;
+            border-radius: 10px;
+            background-color: #1e1e1e;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            width: 350px;
+        }
+        input, button {
+            display: block;
+            width: 90%;
+            margin-bottom: 15px;
+            padding: 12px;
+            border-radius: 5px;
+            border: none;
+            font-size: 16px;
+        }
+        input {
+            background-color: #2a2a2a;
+            color: #e0e0e0;
+            border: 1px solid #444;
+        }
+        input:focus {
+            outline: none;
+            border-color: #76c7c0;
+            box-shadow: 0 0 5px rgba(118, 199, 192, 0.5);
+        }
+        button {
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .btn-submit {
+            background-color: #76c7c0;
+            color: #121212;
+        }
+        .btn-submit:hover {
+            background-color: #5bb5ae;
+        }
+        .btn-home {
+            background-color: #444;
+            color: #e0e0e0;
+        }
+        .btn-home:hover {
+            background-color: #666;
+        }
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Añadir Nueva Contraseña</h2>
+
+    <div class="container">
+        <form action="/add-password" method="POST">
+            <label for="service">Servicio:</label>
+            <input type="text" id="service" name="service" required>
+
+            <label for="password">Contraseña:</label>
+            <input type="password" id="password" name="password" required>
+
+            <button type="submit" class="btn-submit">Añadir</button>
+        </form>
+
+        <button onclick="window.location.href='/'" class="btn-home">Volver a Home</button>
+    </div>
+
+</body>
+</html>
+
