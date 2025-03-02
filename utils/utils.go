@@ -1,8 +1,16 @@
 package utils
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/base64"
 	"errors"
+
+	"golang.org/x/crypto/pbkdf2"
+	"golang.org/x/crypto/sha3"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -84,4 +92,67 @@ func GetPassword(db *sql.DB, service string) (string, error) {
 		return "", err
 	}
 	return password, nil
+}
+
+func DeriveKey(passphrase string, salt string) []byte {
+	return pbkdf2.Key([]byte(passphrase), []byte(salt), 4096, 32, sha256.New)
+}
+
+// Cifra un texto con AES-GCM
+func EncryptAES(plaintext, passphrase string) (string, error) {
+	salt := sha3.Sum256([]byte(passphrase))       // Generamos una "sal" fija desde la frase
+	key := DeriveKey(passphrase, string(salt[:])) // Derivamos la clave
+
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return "", err
+	}
+
+	aesGCM, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", err
+	}
+
+	nonce := make([]byte, aesGCM.NonceSize())
+	if _, err := rand.Read(nonce); err != nil {
+		return "", err
+	}
+
+	ciphertext := aesGCM.Seal(nonce, nonce, []byte(plaintext), nil)
+	return base64.StdEncoding.EncodeToString(ciphertext), nil
+}
+
+// Descifra un texto con AES-GCM
+func DecryptAES(ciphertext, passphrase string) (string, error) {
+	salt := sha3.Sum256([]byte(passphrase))
+	key := DeriveKey(passphrase, string(salt[:]))
+
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return "", err
+	}
+
+	aesGCM, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", err
+	}
+
+	data, err := base64.StdEncoding.DecodeString(ciphertext)
+	if err != nil {
+		return "", err
+	}
+
+	nonceSize := aesGCM.NonceSize()
+	if len(data) < nonceSize {
+		return "", errors.New("ciphertext too short")
+	}
+
+	nonce, encryptedData := data[:nonceSize], data[nonceSize:]
+
+	plaintext, err := aesGCM.Open(nil, nonce, encryptedData, nil)
+	if err != nil {
+		return "", err
+	}
+
+	return string(plaintext), nil
 }

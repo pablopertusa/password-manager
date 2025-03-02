@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Añadir Contraseña</title>
+    <title>Identidad</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -14,7 +14,7 @@
         }
         .container {
             background: #1e1e1e;
-            padding: 40px;
+            padding: 30px;
             border-radius: 10px;
             box-shadow: 0px 0px 15px rgba(255, 255, 255, 0.1);
             display: inline-block;
@@ -24,16 +24,15 @@
         label {
             font-weight: bold;
             display: block;
-            margin-top: 15px;
-            font-size: 18px;
+            margin-top: 20px;
         }
         input, button {
-            margin-top: 15px;
-            padding: 16px;
-            width: calc(100% - 32px);
+            margin-top: 10px;
+            padding: 14px;
+            width: calc(100% - 24px);
             border: none;
             border-radius: 5px;
-            font-size: 18px;
+            font-size: 16px;
         }
         input {
             background-color: #2b2b2b;
@@ -44,46 +43,27 @@
             outline: none;
             border-color: #007bff;
         }
-        .button-container {
-            margin-top: 30px;
-        }
         button {
             background-color: #007bff;
             color: white;
             font-weight: bold;
             cursor: pointer;
             transition: background 0.3s;
+            margin-top: 20px;
         }
         button:hover {
             background-color: #0056b3;
-        }
-        .btn-secondary {
-            background-color: #444;
-        }
-        .btn-secondary:hover {
-            background-color: #666;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2><strong>Añadir Nueva Contraseña</strong></h2>
-        <form action="/add-password" method="POST">
-            <label for="service">Servicio:</label>
-            <input type="text" id="service" name="service" required>
-
-            <label for="password">Contraseña:</label>
-            <input type="password" id="password" name="password" required>
-
-            <label for="passphrase">Frase Secreta:</label>
-            <input type="password" id="passphrase" name="passphrase" required>
-
-            <div class="button-container">
-                <button type="submit">Añadir</button>
-                <button type="button" class="btn-secondary" onclick="window.location.href='/home'">Volver a Home</button>
-            </div>
+        <h2>Alto ahí, ¿Quién eres?</h2>
+        <form action="/get-identity" method="POST">
+            <label for="name">Pon tu Nombre:</label>
+            <input type="text" id="name" name="name" required>
+            <button type="submit">Enviar</button>
         </form>
     </div>
 </body>
 </html>
-

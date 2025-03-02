@@ -3,6 +3,7 @@ package main
 import (
 	"cli-tool/utils"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
@@ -68,7 +69,6 @@ func homeHandler(w http.ResponseWriter, req *http.Request) {
 	tmpl := template.Must(template.ParseFiles("static/home.html"))
 	data := PageData{Title: "Gestor de Contraseñas"}
 	tmpl.Execute(w, data)
-	fmt.Println("request home received")
 }
 
 func formHandler(w http.ResponseWriter, req *http.Request) {
@@ -85,13 +85,20 @@ func addPasswordHandler(db *sql.DB) http.HandlerFunc {
 
 		service := r.FormValue("service")
 		password := r.FormValue("password")
+		passphrase := r.FormValue("passphrase")
 
-		if service == "" || password == "" {
+		if service == "" || password == "" || passphrase == "" {
 			http.Error(w, "Faltan datos", http.StatusBadRequest)
 			return
 		}
-
-		err := utils.AddPassword(db, service, password)
+		encrypted_password, err := utils.EncryptAES(password, passphrase)
+		if err != nil {
+			tmpl := template.Must(template.ParseFiles("static/error.html"))
+			pagedata := InfoPage{Information: err.Error()}
+			tmpl.Execute(w, pagedata)
+			return
+		}
+		err = utils.AddPassword(db, service, encrypted_password)
 		if err != nil {
 			tmpl := template.Must(template.ParseFiles("static/error.html"))
 			pagedata := InfoPage{Information: err.Error()}
@@ -104,14 +111,14 @@ func addPasswordHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func getPasswordHandler(db *sql.DB) http.HandlerFunc {
+func getPasswordPageHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
 			return
 		}
 		service := r.URL.Query().Get("service")
-		password, err := utils.GetPassword(db, service)
+		exists, err := utils.CheckServiceExists(db, service)
 		if service == "" {
 			http.Error(w, "Parámetro 'service' es requerido", http.StatusBadRequest)
 			return
@@ -122,11 +129,62 @@ func getPasswordHandler(db *sql.DB) http.HandlerFunc {
 			tmpl.Execute(w, pagedata)
 			return
 		}
-		tmpl := template.Must(template.ParseFiles("static/success.html"))
-		info := InfoPage{Information: password}
+		if !exists {
+			tmpl := template.Must(template.ParseFiles("static/error.html"))
+			pagedata := InfoPage{Information: "El servicio no existe"}
+			tmpl.Execute(w, pagedata)
+			return
+		}
+
+		tmpl := template.Must(template.ParseFiles("static/decrypt.html"))
+		info := InfoPage{Information: service}
 		tmpl.Execute(w, info)
 	}
 }
+
+func decryptPasswordHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		service := r.URL.Query().Get("service")
+		passphrase := r.URL.Query().Get("passphrase")
+		ciphertext, err := utils.GetPassword(db, service)
+		if err != nil {
+			response := map[string]string{"error": err.Error()}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+		plaintext, err := utils.DecryptAES(ciphertext, passphrase)
+		if err != nil {
+			response := map[string]string{"error": "Error al desencriptar, comprueba tu passphrase"}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+		response := map[string]string{"password": plaintext}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}
+}
+
+func getIdentityHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+
+	name := r.FormValue("name")
+	if name == "peibol" {
+		http.Redirect(w, r, "/home", http.StatusSeeOther) // 303 See Other para redirecciones después de POST
+	} else {
+		w.Write([]byte("vete de aquí"))
+	}
+}
+
+func identityFormHandler(w http.ResponseWriter, r *http.Request) {
+	tmpl := template.Must(template.ParseFiles("static/identity.html"))
+	tmpl.Execute(w, tmpl)
+}
+
 func main() {
 
 	db, err := initDatabase()
@@ -135,11 +193,14 @@ func main() {
 	}
 	defer db.Close()
 
-	http.HandleFunc("/", homeHandler)
+	http.HandleFunc("/", identityFormHandler)
+	http.HandleFunc("/get-identity", getIdentityHandler)
+	http.HandleFunc("/home", homeHandler)
 	http.HandleFunc("/show-passwords", showPasswordsHandler(db))
 	http.HandleFunc("/add-password", addPasswordHandler(db))
 	http.HandleFunc("/add-password-form", formHandler)
-	http.HandleFunc("/get-password", getPasswordHandler(db))
+	http.HandleFunc("/get-password", getPasswordPageHandler(db))
+	http.HandleFunc("/decrypt-password", decryptPasswordHandler(db))
 	fmt.Println("init")
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	http.ListenAndServe(":2727", nil)
