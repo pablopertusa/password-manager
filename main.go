@@ -15,6 +15,10 @@ type PageData struct {
 	Title string
 }
 
+type InfoPage struct {
+	Information string
+}
+
 type Password struct {
 	Service string
 }
@@ -89,12 +93,14 @@ func addPasswordHandler(db *sql.DB) http.HandlerFunc {
 
 		err := utils.AddPassword(db, service, password)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			tmpl := template.Must(template.ParseFiles("static/error.html"))
+			pagedata := InfoPage{Information: err.Error()}
+			tmpl.Execute(w, pagedata)
 			return
 		}
-
-		w.Write([]byte("Contraseña agregada con éxito"))
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+		tmpl := template.Must(template.ParseFiles("static/success.html"))
+		info := InfoPage{Information: "Contraseña creada con éxito"}
+		tmpl.Execute(w, info)
 	}
 }
 
