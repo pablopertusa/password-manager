@@ -2,17 +2,10 @@ package utils
 
 import (
 	"database/sql"
+	"errors"
 
 	_ "github.com/mattn/go-sqlite3"
 )
-
-type CustomError struct {
-	Message string
-}
-
-func (ce *CustomError) Error() string {
-	return ce.Message
-}
 
 func CreateTable(db *sql.DB) (*sql.DB, error) {
 	query := `
@@ -65,7 +58,7 @@ func AddPassword(db *sql.DB, service string, password string) error {
 		return err
 	}
 	if service_exists {
-		return &CustomError{Message: "El servicio ya existe"}
+		return errors.New("el servicio ya existe, edítalo si quieres cambiar la contraseña")
 	}
 
 	var query string = "INSERT INTO services (name, password) VALUES (?, ?)"
@@ -74,4 +67,21 @@ func AddPassword(db *sql.DB, service string, password string) error {
 		return err
 	}
 	return nil
+}
+
+func GetPassword(db *sql.DB, service string) (string, error) {
+	exists, err := CheckServiceExists(db, service)
+	if err != nil {
+		return "", err
+	}
+	if !exists {
+		return "", errors.New("no hay ningún servicio con ese nombre")
+	}
+	var password string
+	query := "SELECT password FROM services WHERE name = ?"
+	err = db.QueryRow(query, service).Scan(&password)
+	if err != nil {
+		return "", err
+	}
+	return password, nil
 }

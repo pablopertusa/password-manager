@@ -104,6 +104,29 @@ func addPasswordHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+func getPasswordHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+			return
+		}
+		service := r.URL.Query().Get("service")
+		password, err := utils.GetPassword(db, service)
+		if service == "" {
+			http.Error(w, "Parámetro 'service' es requerido", http.StatusBadRequest)
+			return
+		}
+		if err != nil {
+			tmpl := template.Must(template.ParseFiles("static/error.html"))
+			pagedata := InfoPage{Information: err.Error()}
+			tmpl.Execute(w, pagedata)
+			return
+		}
+		tmpl := template.Must(template.ParseFiles("static/success.html"))
+		info := InfoPage{Information: password}
+		tmpl.Execute(w, info)
+	}
+}
 func main() {
 
 	db, err := initDatabase()
@@ -116,6 +139,7 @@ func main() {
 	http.HandleFunc("/show-passwords", showPasswordsHandler(db))
 	http.HandleFunc("/add-password", addPasswordHandler(db))
 	http.HandleFunc("/add-password-form", formHandler)
+	http.HandleFunc("/get-password", getPasswordHandler(db))
 	fmt.Println("init")
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	http.ListenAndServe(":2727", nil)
