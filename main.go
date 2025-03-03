@@ -1,13 +1,13 @@
 package main
 
 import (
-	"cli-tool/utils"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
 	"net/http"
+	"password-manager/utils"
 
 	_ "github.com/mattn/go-sqlite3" // Importación anónima para registrar el driver
 )
