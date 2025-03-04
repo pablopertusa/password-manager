@@ -7,7 +7,10 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"os"
 	"password-manager/utils"
+
+	"github.com/joho/godotenv"
 
 	_ "github.com/mattn/go-sqlite3" // Importación anónima para registrar el driver
 )
@@ -25,7 +28,7 @@ type Password struct {
 }
 
 func initDatabase() (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", "sqlite.db")
+	db, err := sql.Open("sqlite3", "database.db")
 	if err != nil {
 		return nil, err
 	}
@@ -166,17 +169,19 @@ func decryptPasswordHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func getIdentityHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
-		return
-	}
+func getIdentityHandler(root_name string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+			return
+		}
 
-	name := r.FormValue("name")
-	if name == "peibol" {
-		http.Redirect(w, r, "/home", http.StatusSeeOther) // 303 See Other para redirecciones después de POST
-	} else {
-		w.Write([]byte("vete de aquí"))
+		name := r.FormValue("name")
+		if name == root_name {
+			http.Redirect(w, r, "/home", http.StatusSeeOther) // 303 See Other para redirecciones después de POST
+		} else {
+			w.Write([]byte("vete de aquí"))
+		}
 	}
 }
 
@@ -187,6 +192,16 @@ func identityFormHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error cargando el archivo .env")
+	}
+
+	root_name := os.Getenv("user_name")
+	if root_name == "" {
+		log.Fatal("Error leyendo .env")
+	}
+
 	db, err := initDatabase()
 	if err != nil {
 		log.Fatal(err)
@@ -194,7 +209,7 @@ func main() {
 	defer db.Close()
 
 	http.HandleFunc("/", identityFormHandler)
-	http.HandleFunc("/get-identity", getIdentityHandler)
+	http.HandleFunc("/get-identity", getIdentityHandler(root_name))
 	http.HandleFunc("/home", homeHandler)
 	http.HandleFunc("/show-passwords", showPasswordsHandler(db))
 	http.HandleFunc("/add-password", addPasswordHandler(db))
