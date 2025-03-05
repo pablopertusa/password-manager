@@ -59,11 +59,13 @@
 <body>
     <div class="container">
         <h2>Alto ahí, ¿Quién eres?</h2>
-        <form action="/get-identity" method="POST">
+        <form id="identityForm">
             <label for="name">Pon tu Nombre:</label>
             <input type="text" id="name" name="name" required>
             <button type="submit">Enviar</button>
         </form>
     </div>
+
+    <script src="/js/auth.js"></script>
 </body>
 </html>

@@ -1,0 +1,2 @@
+hay que hacer como una funcion en el servidor que sea /render/{nombre_pagina} para que redirija al html que toca
+cada vez que se toca un boton para cambiar de pagina se hace una solicitud a este render

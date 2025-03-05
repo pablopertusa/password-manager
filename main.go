@@ -8,12 +8,36 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
+
 	"password-manager/utils"
 
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
-
-	_ "github.com/mattn/go-sqlite3" // Importación anónima para registrar el driver
+	_ "github.com/mattn/go-sqlite3"
 )
+
+// Cargar variables de entorno
+func loadEnv() {
+	err := godotenv.Load()
+	if err != nil {
+		fmt.Println(err.Error())
+		log.Fatal("Error cargando el archivo .env")
+	}
+}
+
+func init() {
+	loadEnv()
+}
+
+var rootName string
+var jwtKey []byte
+
+type Claims struct {
+	Username string `json:"username"`
+	jwt.RegisteredClaims
+}
 
 type PageData struct {
 	Title string
@@ -169,7 +193,36 @@ func decryptPasswordHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func getIdentityHandler(root_name string) http.HandlerFunc {
+func identityFormHandler(w http.ResponseWriter, r *http.Request) {
+	tmpl := template.Must(template.ParseFiles("static/prueba.html"))
+	tmpl.Execute(w, tmpl)
+}
+
+// Middleware para verificar JWT
+func authMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		tokenStr := r.Header.Get("Authorization")
+		if tokenStr == "" {
+			http.Error(w, "Acceso denegado", http.StatusUnauthorized)
+			return
+		}
+
+		claims := &Claims{}
+		token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+			return jwtKey, nil
+		})
+
+		if err != nil || !token.Valid {
+			http.Error(w, "Token inválido o expirado", http.StatusUnauthorized)
+			return
+		}
+
+		next.ServeHTTP(w, r) // Si el token es válido, continúa con la solicitud
+	})
+}
+
+// Generar JWT para el usuario
+func getIdentityHandler(rootName string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
@@ -177,29 +230,39 @@ func getIdentityHandler(root_name string) http.HandlerFunc {
 		}
 
 		name := r.FormValue("name")
-		if name == root_name {
-			http.Redirect(w, r, "/home", http.StatusSeeOther) // 303 See Other para redirecciones después de POST
+		if name == rootName {
+			expirationTime := time.Now().Add(15 * time.Minute)
+			claims := &Claims{
+				Username: name,
+				RegisteredClaims: jwt.RegisteredClaims{
+					ExpiresAt: jwt.NewNumericDate(expirationTime),
+				},
+			}
+
+			token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+			tokenString, err := token.SignedString(jwtKey)
+			if err != nil {
+				http.Error(w, "Error generando token", http.StatusInternalServerError)
+				return
+			}
+
+			json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
 		} else {
-			w.Write([]byte("vete de aquí"))
+			w.Write([]byte("Vete de aquí"))
 		}
 	}
 }
 
-func identityFormHandler(w http.ResponseWriter, r *http.Request) {
-	tmpl := template.Must(template.ParseFiles("static/identity.html"))
-	tmpl.Execute(w, tmpl)
-}
-
 func main() {
 
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error cargando el archivo .env")
-	}
+	rootName = os.Getenv("USER_NAME")
+	jwtKey = []byte(os.Getenv("JWT_KEY"))
 
-	root_name := os.Getenv("user_name")
-	if root_name == "" {
-		log.Fatal("Error leyendo .env")
+	if rootName == "" {
+		log.Fatal("Error: 'USER_NAME' no definido en .env")
+	}
+	if len(jwtKey) == 0 {
+		log.Fatal("Error: 'JWT_KEY' no definido en .env")
 	}
 
 	db, err := initDatabase()
@@ -208,15 +271,27 @@ func main() {
 	}
 	defer db.Close()
 
-	http.HandleFunc("/", identityFormHandler)
-	http.HandleFunc("/get-identity", getIdentityHandler(root_name))
-	http.HandleFunc("/home", homeHandler)
-	http.HandleFunc("/show-passwords", showPasswordsHandler(db))
-	http.HandleFunc("/add-password", addPasswordHandler(db))
-	http.HandleFunc("/add-password-form", formHandler)
-	http.HandleFunc("/get-password", getPasswordPageHandler(db))
-	http.HandleFunc("/decrypt-password", decryptPasswordHandler(db))
-	fmt.Println("init")
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-	http.ListenAndServe(":2727", nil)
+	r := mux.NewRouter()
+
+	r.HandleFunc("/", identityFormHandler).Methods("GET")
+	r.HandleFunc("/login", getIdentityHandler(rootName)).Methods("POST")
+
+	// Todas las rutas protegidas pasan por el middleware
+	protected := r.PathPrefix("/").Subrouter()
+	protected.Use(authMiddleware)
+	protected.HandleFunc("/home", homeHandler).Methods("GET")
+	protected.HandleFunc("/show-passwords", showPasswordsHandler(db)).Methods("GET")
+	protected.HandleFunc("/add-password", addPasswordHandler(db)).Methods("POST")
+	protected.HandleFunc("/add-password-form", formHandler).Methods("GET")
+	protected.HandleFunc("/get-password", getPasswordPageHandler(db)).Methods("GET")
+	protected.HandleFunc("/decrypt-password", decryptPasswordHandler(db)).Methods("GET")
+
+	fmt.Println("Servidor en http://localhost:2727")
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+
+	// Definir un manejador para el archivo "auth.js"
+	r.HandleFunc("/js/auth.js", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "static/js/auth.js")
+	}).Methods("GET")
+	http.ListenAndServe(":2727", r)
 }
