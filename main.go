@@ -34,11 +34,6 @@ func init() {
 var rootName string
 var jwtKey []byte
 
-type Claims struct {
-	Username string `json:"username"`
-	jwt.RegisteredClaims
-}
-
 type PageData struct {
 	Title string
 }
@@ -194,21 +189,20 @@ func decryptPasswordHandler(db *sql.DB) http.HandlerFunc {
 }
 
 func identityFormHandler(w http.ResponseWriter, r *http.Request) {
-	tmpl := template.Must(template.ParseFiles("static/prueba.html"))
+	tmpl := template.Must(template.ParseFiles("static/identity.html"))
 	tmpl.Execute(w, tmpl)
 }
 
 // Middleware para verificar JWT
 func authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		tokenStr := r.Header.Get("Authorization")
-		if tokenStr == "" {
-			http.Error(w, "Acceso denegado", http.StatusUnauthorized)
+		cookie, err := r.Cookie("auth_token")
+		if err != nil {
+			http.Error(w, "Acceso denegado: no autenticado", http.StatusUnauthorized)
 			return
 		}
 
-		claims := &Claims{}
-		token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+		token, err := jwt.Parse(cookie.Value, func(token *jwt.Token) (interface{}, error) {
 			return jwtKey, nil
 		})
 
@@ -216,6 +210,22 @@ func authMiddleware(next http.Handler) http.Handler {
 			http.Error(w, "Token inválido o expirado", http.StatusUnauthorized)
 			return
 		}
+
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			http.Error(w, "Token mal formado", http.StatusUnauthorized)
+			return
+		}
+
+		if exp, ok := claims["exp"].(float64); ok {
+			if time.Now().Unix() > int64(exp) {
+				http.Error(w, "Token expirado", http.StatusUnauthorized)
+				return
+			}
+		}
+
+		username, _ := claims["username"].(string)
+		fmt.Println("Usuario autenticado:", username)
 
 		next.ServeHTTP(w, r) // Si el token es válido, continúa con la solicitud
 	})
@@ -232,11 +242,9 @@ func getIdentityHandler(rootName string) http.HandlerFunc {
 		name := r.FormValue("name")
 		if name == rootName {
 			expirationTime := time.Now().Add(15 * time.Minute)
-			claims := &Claims{
-				Username: name,
-				RegisteredClaims: jwt.RegisteredClaims{
-					ExpiresAt: jwt.NewNumericDate(expirationTime),
-				},
+			claims := jwt.MapClaims{
+				"username": name,
+				"exp":      expirationTime.Unix(),
 			}
 
 			token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -246,9 +254,19 @@ func getIdentityHandler(rootName string) http.HandlerFunc {
 				return
 			}
 
-			json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
+			// Configurar la cookie con el token
+			http.SetCookie(w, &http.Cookie{
+				Name:     "auth_token",
+				Value:    tokenString,
+				Expires:  expirationTime,
+				HttpOnly: true,  // Protege contra acceso desde JS
+				Secure:   false, // Ponlo en true si usas HTTPS
+				Path:     "/",
+			})
+
+			http.Redirect(w, r, "/protected/home", http.StatusSeeOther)
 		} else {
-			w.Write([]byte("Vete de aquí"))
+			w.Write([]byte("Credenciales inválidas"))
 		}
 	}
 }
@@ -277,14 +295,14 @@ func main() {
 	r.HandleFunc("/login", getIdentityHandler(rootName)).Methods("POST")
 
 	// Todas las rutas protegidas pasan por el middleware
-	protected := r.PathPrefix("/").Subrouter()
+	protected := r.PathPrefix("/protected").Subrouter()
 	protected.Use(authMiddleware)
-	protected.HandleFunc("/home", homeHandler).Methods("GET")
-	protected.HandleFunc("/show-passwords", showPasswordsHandler(db)).Methods("GET")
-	protected.HandleFunc("/add-password", addPasswordHandler(db)).Methods("POST")
-	protected.HandleFunc("/add-password-form", formHandler).Methods("GET")
-	protected.HandleFunc("/get-password", getPasswordPageHandler(db)).Methods("GET")
-	protected.HandleFunc("/decrypt-password", decryptPasswordHandler(db)).Methods("GET")
+	protected.HandleFunc("/protected/home", homeHandler).Methods("GET")
+	protected.HandleFunc("/protected/show-passwords", showPasswordsHandler(db)).Methods("GET")
+	protected.HandleFunc("/protected/add-password", addPasswordHandler(db)).Methods("POST")
+	protected.HandleFunc("/protected/add-password-form", formHandler).Methods("GET")
+	protected.HandleFunc("/protected/get-password", getPasswordPageHandler(db)).Methods("GET")
+	protected.HandleFunc("/protected/decrypt-password", decryptPasswordHandler(db)).Methods("GET")
 
 	fmt.Println("Servidor en http://localhost:2727")
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
