@@ -8,9 +8,8 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
-
 	"password-manager/utils"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/mux"
@@ -190,7 +189,7 @@ func decryptPasswordHandler(db *sql.DB) http.HandlerFunc {
 
 func identityFormHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("static/identity.html"))
-	tmpl.Execute(w, tmpl)
+	tmpl.Execute(w, nil)
 }
 
 // Middleware para verificar JWT
@@ -266,7 +265,7 @@ func getIdentityHandler(rootName string) http.HandlerFunc {
 
 			http.Redirect(w, r, "/protected/home", http.StatusSeeOther)
 		} else {
-			w.Write([]byte("Credenciales inválidas"))
+			w.Write([]byte("vete de aquí"))
 		}
 	}
 }
@@ -297,19 +296,15 @@ func main() {
 	// Todas las rutas protegidas pasan por el middleware
 	protected := r.PathPrefix("/protected").Subrouter()
 	protected.Use(authMiddleware)
-	protected.HandleFunc("/protected/home", homeHandler).Methods("GET")
-	protected.HandleFunc("/protected/show-passwords", showPasswordsHandler(db)).Methods("GET")
-	protected.HandleFunc("/protected/add-password", addPasswordHandler(db)).Methods("POST")
-	protected.HandleFunc("/protected/add-password-form", formHandler).Methods("GET")
-	protected.HandleFunc("/protected/get-password", getPasswordPageHandler(db)).Methods("GET")
-	protected.HandleFunc("/protected/decrypt-password", decryptPasswordHandler(db)).Methods("GET")
+	protected.HandleFunc("/home", homeHandler).Methods("GET")
+	protected.HandleFunc("/show-passwords", showPasswordsHandler(db)).Methods("GET")
+	protected.HandleFunc("/add-password", addPasswordHandler(db)).Methods("POST")
+	protected.HandleFunc("/add-password-form", formHandler).Methods("GET")
+	protected.HandleFunc("/get-password", getPasswordPageHandler(db)).Methods("GET")
+	protected.HandleFunc("/decrypt-password", decryptPasswordHandler(db)).Methods("GET")
 
 	fmt.Println("Servidor en http://localhost:2727")
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
-	// Definir un manejador para el archivo "auth.js"
-	r.HandleFunc("/js/auth.js", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "static/js/auth.js")
-	}).Methods("GET")
 	http.ListenAndServe(":2727", r)
 }

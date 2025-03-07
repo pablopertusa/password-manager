@@ -10,10 +10,9 @@ COPY . .
 
 # Compila el binario estático, usa CGO_ENABLED=1 porque necesita interactuar con sqlite
 RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o server main.go
-RUN ls -l /app
 
 # Imagen Linux liviana
-FROM alpine:3.16
+FROM alpine:latest
 
 # Instala dependencias necesarias para SQLite
 RUN apk update && apk add --no-cache ca-certificates sqlite

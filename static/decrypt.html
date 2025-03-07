@@ -94,7 +94,7 @@
                 return;
             }
 
-            fetch(`/decrypt-password?service=${service}&passphrase=${passphrase}`)
+            fetch(`/protected/decrypt-password?service=${service}&passphrase=${passphrase}`)
                 .then(response => response.json())
                 .then(data => {
                     const resultElement = document.getElementById("password-result");
@@ -113,7 +113,7 @@
         }
 
         function goHome() {
-            window.location.href = "/home";
+            window.location.href = "/protected/home";
         }
     </script>
 
