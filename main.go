@@ -335,9 +335,9 @@ func main() {
 	protected.HandleFunc("/get-password", getPasswordPageHandler(db)).Methods("GET")
 	protected.HandleFunc("/decrypt-password", decryptPasswordHandler(db)).Methods("GET")
 	protected.HandleFunc("/update-password", updatePasswordHandler(db)).Methods("POST")
+	protected.PathPrefix("/static/").Handler(http.StripPrefix("/protected/static/", http.FileServer(http.Dir("static"))))
 
 	fmt.Println("Servidor en http://localhost:2727")
-	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	http.ListenAndServe(":2727", r)
 }
