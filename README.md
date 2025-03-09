@@ -1,6 +1,6 @@
 # Gestor de Contraseñas en Go
 
-Este es un gestor de contraseñas seguro desarrollado en **Golang**, con autenticación y encriptación de datos. Permite almacenar, recuperar y gestionar contraseñas de forma segura.
+Este es un gestor de contraseñas seguro desarrollado en **Golang**, con autenticación y encriptación de datos. Permite almacenar, recuperar y gestionar contraseñas de forma segura. No hace falta que dependas de servicios de código cerrado para gestionar tus contraseñas. Si quieres disponer de este servicio en cualquier momento, solo tienes que desplejarlo en la nube de tu proveedor favorito y listo. Es suficiente con la capa gratuita de la mayoría de ellos. Instrucciones para esto próximamente.
 
 ## Características
 - Autenticación de usuario.
