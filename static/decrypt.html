@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Desencriptar Contraseña</title>
     <style>
-        /* Modo oscuro */
         body {
             font-family: Arial, sans-serif;
             text-align: center;
@@ -62,21 +61,32 @@
             margin-top: 20px;
             font-weight: bold;
         }
+        #edit-container {
+            display: none;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h2>Servicio: {{.Information}} <span id="service-name"></span></h2>
+        <h2>Servicio: {{ .Information }}<span id="service-name"></span></h2>
         <label for="passphrase">Ingrese su passphrase:</label>
         <input type="password" id="passphrase" placeholder="Escribe tu passphrase">
         
         <div class="button-container">
             <button onclick="decryptPassword()">Desencriptar</button>
+            <button id="edit-button" onclick="showEditForm()" disabled>Editar</button>
             <button class="btn-secondary" onclick="goHome()">Volver a Home</button>
         </div>
 
         <p class="result" id="password-result"></p>
+        
+        <div id="edit-container">
+            <input type="password" id="new-password" placeholder="Nueva contraseña">
+            <button onclick="updatePassword()">Confirmar</button>
+            <p class="result" id="password-update-result"></p>
+        </div>
     </div>
 
     <script>
@@ -101,22 +111,62 @@
                     if (data.error) {
                         resultElement.style.color = "red";
                         resultElement.textContent = "Error: " + data.error;
+                        document.getElementById("edit-container").style.display = "none"
                     } else {
                         resultElement.style.color = "lime";
                         resultElement.textContent = "Contraseña: " + data.password;
+                        document.getElementById("edit-button").disabled = false
                     }
                 })
                 .catch(error => {
                     document.getElementById("password-result").style.color = "red";
                     document.getElementById("password-result").textContent = "Error en la solicitud.";
+                    document.getElementById("edit-container").style.display = "none"
                 });
+        }
+
+        function showEditForm() {
+            document.getElementById("edit-container").style.display = "block";
+        }
+
+        function updatePassword() {
+            const service = getQueryParam("service");
+            const newPassword = document.getElementById("new-password").value;
+            const passphrase = document.getElementById("passphrase").value;
+
+            if (!passphrase) {
+                alert("Por favor, ingrese la passphrase.");
+                return;
+            }
+            
+            if (!newPassword) {
+                alert("Por favor, ingrese la nueva contraseña.");
+                return;
+            }
+
+            fetch(`/protected/update-password?service=${service}&newPassword=${newPassword}&passphrase=${passphrase}`, {
+                method: "POST",
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data)
+                if (data.success) {
+                    alert("Contraseña actualizada correctamente");
+                    document.getElementById("edit-container").style.display = "none";
+                    document.getElementById("password-update-result").textContent = "Contraseña actualizada";
+                    document.getElementById("password-result").textContent = "";
+                } else {
+                    alert("Error al actualizar la contraseña");
+                }
+            })
+            .catch(error => {
+                alert("Error en la solicitud.");
+            });
         }
 
         function goHome() {
             window.location.href = "/protected/home";
         }
     </script>
-
 </body>
 </html>
-

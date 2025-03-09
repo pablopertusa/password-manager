@@ -270,6 +270,38 @@ func getIdentityHandler(rootName string) http.HandlerFunc {
 	}
 }
 
+func updatePasswordHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		service := r.URL.Query().Get("service")
+		newPassword := r.URL.Query().Get("newPassword")
+		passphrase := r.URL.Query().Get("passphrase")
+
+		if service == "" || newPassword == "" || passphrase == "" {
+			http.Error(w, "Faltan datos", http.StatusBadRequest)
+			return
+		}
+
+		encrypted_password, err := utils.EncryptAES(newPassword, passphrase)
+		if err != nil {
+			tmpl := template.Must(template.ParseFiles("static/error.html"))
+			pagedata := InfoPage{Information: err.Error()}
+			tmpl.Execute(w, pagedata)
+			return
+		}
+
+		err = utils.UpdatePassword(db, service, encrypted_password)
+		if err != nil {
+			response := map[string]bool{"success": false}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+		response := map[string]bool{"success": true}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}
+}
+
 func main() {
 
 	rootName = os.Getenv("USER_NAME")
@@ -302,6 +334,7 @@ func main() {
 	protected.HandleFunc("/add-password-form", formHandler).Methods("GET")
 	protected.HandleFunc("/get-password", getPasswordPageHandler(db)).Methods("GET")
 	protected.HandleFunc("/decrypt-password", decryptPasswordHandler(db)).Methods("GET")
+	protected.HandleFunc("/update-password", updatePasswordHandler(db)).Methods("POST")
 
 	fmt.Println("Servidor en http://localhost:2727")
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))

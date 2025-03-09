@@ -94,6 +94,12 @@ func GetPassword(db *sql.DB, service string) (string, error) {
 	return password, nil
 }
 
+func UpdatePassword(db *sql.DB, service string, newPassword string) error {
+	query := "UPDATE services SET password = ? WHERE name = ?"
+	_, err := db.Exec(query, newPassword, service)
+	return err
+}
+
 func DeriveKey(passphrase string, salt string) []byte {
 	return pbkdf2.Key([]byte(passphrase), []byte(salt), 4096, 32, sha256.New)
 }
