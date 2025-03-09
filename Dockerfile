@@ -1,28 +1,23 @@
-# Usa la imagen oficial de Go para compilar el binario
-FROM golang:1.23 AS builder
+FROM golang:1.23
 
+# Set destination for COPY
 WORKDIR /app
 
+# Download Go modules
 COPY go.mod go.sum ./
 RUN go mod download
 
-COPY . .
+COPY utils/*.go ./utils/
+COPY ./*.go .
 
-# Compila el binario estático, usa CGO_ENABLED=1 porque necesita interactuar con sqlite
-RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o server main.go
+# Build
+RUN CGO_ENABLED=1 GOOS=linux go build -o /app/server
+COPY static /app/static
+COPY .env /app/
 
-# Imagen Linux liviana
-FROM alpine:latest
+COPY static /server/static
 
-# Instala dependencias necesarias para SQLite
-RUN apk update && apk add --no-cache ca-certificates sqlite
+EXPOSE 2727
 
-# Establece el directorio de trabajo
-WORKDIR /root
-
-# Copia el binario compilado desde la etapa anterior
-COPY --from=builder /app/server /root/
-
-EXPOSE 8080
-
-CMD ["./server"]
+# Run
+CMD ["/app/server"]
