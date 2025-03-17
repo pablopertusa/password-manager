@@ -57,12 +57,14 @@ function updatePassword() {
     })
     .then(response => response.json())
     .then(data => {
-        console.log(data)
         if (data.success) {
             alert("Contraseña actualizada correctamente");
             document.getElementById("edit-container").style.display = "none";
             document.getElementById("password-update-result").textContent = "Contraseña actualizada";
             document.getElementById("password-result").textContent = "";
+            document.getElementById("passphrase").value = "";
+            document.getElementById("new-password").value = "";
+            console.log("hola")
         } else {
             alert("Error al actualizar la contraseña");
         }
