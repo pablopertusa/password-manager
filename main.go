@@ -314,6 +314,13 @@ func main() {
 		log.Fatal("Error: 'JWT_KEY' no definido en .env")
 	}
 
+	err := os.Remove(".env")
+	if err != nil {
+		fmt.Println("No se pudo eliminar .env:", err)
+	} else {
+		fmt.Println(".env eliminado")
+	}
+
 	db, err := initDatabase()
 	if err != nil {
 		log.Fatal(err)
