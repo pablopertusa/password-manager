@@ -224,7 +224,7 @@ func authMiddleware(next http.Handler) http.Handler {
 		}
 
 		username, _ := claims["username"].(string)
-		fmt.Println("Usuario autenticado:", username)
+		fmt.Println("Usuario autenticado:", username, ", timestamp:", time.Now().String())
 
 		next.ServeHTTP(w, r) // Si el token es válido, continúa con la solicitud
 	})
