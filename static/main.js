@@ -64,7 +64,6 @@ function updatePassword() {
             document.getElementById("password-result").textContent = "";
             document.getElementById("passphrase").value = "";
             document.getElementById("new-password").value = "";
-            console.log("hola")
         } else {
             alert("Error al actualizar la contraseña");
         }

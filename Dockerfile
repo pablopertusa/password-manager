@@ -12,8 +12,6 @@ RUN CGO_ENABLED=1 GOOS=linux go build -o /app/server
 COPY static /app/static
 COPY .env /app/
 
-COPY static /server/static
-
 EXPOSE 2727
 
 CMD ["/app/server"]
