@@ -76,3 +76,7 @@ function updatePassword() {
 function goHome() {
     window.location.href = "/protected/home";
 }
+
+function goBack() {
+    window.location.href = "/protected/show-passwords";
+}
