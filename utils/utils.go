@@ -77,6 +77,24 @@ func AddPassword(db *sql.DB, service string, password string) error {
 	return nil
 }
 
+func DeleteService(db *sql.DB, service string) error {
+	// TO IMPLEMENT
+	service_exists, err := CheckServiceExists(db, service)
+	if err != nil {
+		return err
+	}
+	if !service_exists {
+		return errors.New("el servicio no existe")
+	}
+
+	var query string = "DELETE FROM services WHERE name = ?"
+	_, err = db.Exec(query, service)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func GetPassword(db *sql.DB, service string) (string, error) {
 	exists, err := CheckServiceExists(db, service)
 	if err != nil {

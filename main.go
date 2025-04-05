@@ -50,7 +50,7 @@ func initDatabase() (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("Conectado a SQLite exitosamente!")
+	fmt.Println("Conectado a SQLite")
 
 	db, e := utils.CreateTable(db)
 	if e != nil {
@@ -302,6 +302,31 @@ func updatePasswordHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+func deletePasswordHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete {
+			http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+			return
+		}
+		service := r.URL.Query().Get("service")
+		if service == "" {
+			http.Error(w, "Falta el parámetro 'service'", http.StatusBadRequest)
+			return
+		}
+
+		err := utils.DeleteService(db, service)
+		if err != nil {
+			response := map[string]interface{}{"success": false, "error": err.Error()}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+		response := map[string]bool{"success": true}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}
+}
+
 func main() {
 
 	rootName = os.Getenv("USER_NAME")
@@ -314,7 +339,7 @@ func main() {
 		log.Fatal("Error: 'JWT_KEY' no definido en .env")
 	}
 
-	// DESCOMENTAR PARA LA IMAGEN DOCKERJ
+	// DESCOMENTAR PARA LA IMAGEN DOCKER
 	//err := os.Remove(".env")
 	//if err != nil {
 	//fmt.Println("No se pudo eliminar .env:", err)
@@ -343,6 +368,7 @@ func main() {
 	protected.HandleFunc("/get-password", getPasswordPageHandler(db)).Methods("GET")
 	protected.HandleFunc("/decrypt-password", decryptPasswordHandler(db)).Methods("GET")
 	protected.HandleFunc("/update-password", updatePasswordHandler(db)).Methods("POST")
+	protected.HandleFunc("/delete-password", deletePasswordHandler(db)).Methods("DELETE")
 	protected.PathPrefix("/static/").Handler(http.StripPrefix("/protected/static/", http.FileServer(http.Dir("static"))))
 
 	fmt.Println("Servidor en http://localhost:2727")
