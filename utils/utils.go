@@ -180,3 +180,8 @@ func DecryptAES(ciphertext, passphrase string) (string, error) {
 
 	return string(plaintext), nil
 }
+
+func CreateSecurePassword() string {
+	// to implement
+	return ""
+}

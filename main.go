@@ -195,9 +195,52 @@ func identityFormHandler(w http.ResponseWriter, r *http.Request) {
 // Middleware para verificar JWT
 func authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		// IMPLEMENT RATE LIMIT FOR USER
+
+		//import (
+		//"net/http"
+		//"sync"
+		//"time"
+		//)
+
+		//type client struct {
+		//lastRequest time.Time
+		//requests    int
+		//}
+
+		//var visitors = make(map[string]*client)
+		//var mu sync.Mutex
+
+		//func rateLimitMiddleware(next http.Handler) http.Handler {
+		//return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		//ip := r.RemoteAddr
+		//mu.Lock()
+		//v, exists := visitors[ip]
+		//if !exists {
+		//v = &client{time.Now(), 1}
+		//visitors[ip] = v
+		//} else {
+		//if time.Since(v.lastRequest) > time.Minute {
+		//v.requests = 1
+		//v.lastRequest = time.Now()
+		//} else {
+		//v.requests++
+		//if v.requests > 10 {
+		//mu.Unlock()
+		//http.Error(w, "Too many requests", http.StatusTooManyRequests)
+		//return
+		//}
+		//}
+		//}
+		//mu.Unlock()
+		//next.ServeHTTP(w, r)
+		//})
+		//}
+
 		cookie, err := r.Cookie("auth_token")
 		if err != nil {
-			http.Error(w, "Acceso denegado: no autenticado", http.StatusUnauthorized)
+			http.Error(w, "Acceso denegado: tu sesión ha expirado", http.StatusUnauthorized)
 			return
 		}
 
@@ -206,13 +249,13 @@ func authMiddleware(next http.Handler) http.Handler {
 		})
 
 		if err != nil || !token.Valid {
-			http.Error(w, "Token inválido o expirado", http.StatusUnauthorized)
+			http.Error(w, "Token inválido", http.StatusUnauthorized)
 			return
 		}
 
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
-			http.Error(w, "Token mal formado", http.StatusUnauthorized)
+			http.Error(w, "Token inválido", http.StatusUnauthorized)
 			return
 		}
 
@@ -240,7 +283,7 @@ func getIdentityHandler(rootName string) http.HandlerFunc {
 
 		name := r.FormValue("name")
 		if name == rootName {
-			expirationTime := time.Now().Add(15 * time.Minute)
+			expirationTime := time.Now().Add(10 * time.Minute)
 			claims := jwt.MapClaims{
 				"username": name,
 				"exp":      expirationTime.Unix(),
