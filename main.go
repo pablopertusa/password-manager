@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"password-manager/utils"
+	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -43,6 +44,11 @@ type InfoPage struct {
 
 type Password struct {
 	Service string
+}
+
+type client struct {
+	lastRequest time.Time
+	requests    int
 }
 
 func initDatabase() (*sql.DB, error) {
@@ -193,50 +199,32 @@ func identityFormHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // Middleware para verificar JWT
+var visitors = make(map[string]*client)
+var mu sync.Mutex
+
 func authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		// IMPLEMENT RATE LIMIT FOR USER
-
-		//import (
-		//"net/http"
-		//"sync"
-		//"time"
-		//)
-
-		//type client struct {
-		//lastRequest time.Time
-		//requests    int
-		//}
-
-		//var visitors = make(map[string]*client)
-		//var mu sync.Mutex
-
-		//func rateLimitMiddleware(next http.Handler) http.Handler {
-		//return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		//ip := r.RemoteAddr
-		//mu.Lock()
-		//v, exists := visitors[ip]
-		//if !exists {
-		//v = &client{time.Now(), 1}
-		//visitors[ip] = v
-		//} else {
-		//if time.Since(v.lastRequest) > time.Minute {
-		//v.requests = 1
-		//v.lastRequest = time.Now()
-		//} else {
-		//v.requests++
-		//if v.requests > 10 {
-		//mu.Unlock()
-		//http.Error(w, "Too many requests", http.StatusTooManyRequests)
-		//return
-		//}
-		//}
-		//}
-		//mu.Unlock()
-		//next.ServeHTTP(w, r)
-		//})
-		//}
+		ip := r.RemoteAddr
+		mu.Lock()
+		v, exists := visitors[ip]
+		if !exists {
+			v = &client{time.Now(), 1}
+			visitors[ip] = v
+		} else {
+			if time.Since(v.lastRequest) > time.Minute {
+				v.requests = 1
+				v.lastRequest = time.Now()
+			} else {
+				v.requests++
+				if v.requests > 100 {
+					mu.Unlock()
+					http.Error(w, "Too many requests", http.StatusTooManyRequests)
+					return
+				}
+			}
+		}
+		mu.Unlock()
 
 		cookie, err := r.Cookie("auth_token")
 		if err != nil {
