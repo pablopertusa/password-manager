@@ -358,6 +358,25 @@ func deletePasswordHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+func passwordHandler(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method != http.MethodGet {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+	pass, err := utils.GeneratePassword(16)
+	if err != nil {
+		response := map[string]bool{"success": false}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	response := map[string]interface{}{"success": true, "pass": pass}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
 func main() {
 
 	rootName = os.Getenv("USER_NAME")
@@ -400,6 +419,7 @@ func main() {
 	protected.HandleFunc("/decrypt-password", decryptPasswordHandler(db)).Methods("GET")
 	protected.HandleFunc("/update-password", updatePasswordHandler(db)).Methods("POST")
 	protected.HandleFunc("/delete-password", deletePasswordHandler(db)).Methods("DELETE")
+	protected.HandleFunc("/genpass", passwordHandler).Methods("GET")
 	protected.PathPrefix("/static/").Handler(http.StripPrefix("/protected/static/", http.FileServer(http.Dir("static"))))
 
 	fmt.Println("Servidor en http://localhost:2727")

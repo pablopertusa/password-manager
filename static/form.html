@@ -24,7 +24,7 @@
         label {
             font-weight: bold;
             display: block;
-            margin-top: 15px;
+            margin-top: 20px;
             font-size: 18px;
         }
         input, button {
@@ -63,6 +63,15 @@
         .btn-secondary:hover {
             background-color: #666;
         }
+        .generate-btn {
+            width: calc(100% - 170px);
+            font-size: 14px;
+            margin-top: 20px;
+            background-color: #28a745;
+        }
+        .generate-btn:hover {
+            background-color: #1e7e34;
+        }
     </style>
 </head>
 <body>
@@ -75,6 +84,8 @@
             <label for="password">Contraseña:</label>
             <input type="password" id="password" name="password" required>
 
+            <button type="button" class="generate-btn" onclick="generate()">Generar Contraseña Segura</button>
+
             <label for="passphrase">Frase Secreta:</label>
             <input type="password" id="passphrase" name="passphrase" required>
 
@@ -84,6 +95,25 @@
             </div>
         </form>
     </div>
+
+    <script>
+        function generate() {
+            fetch('/protected/genpass', {
+                method: 'GET'
+            }) 
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('password').value = data.pass;
+                } else {
+                    alert("Error al generar la contraseña");
+                }
+            })
+            .catch(error => {
+                alert("Hubo un error al hacer la solicitud.");
+                console.error(error);
+            });
+        }
+    </script>
 </body>
 </html>
-
