@@ -1,10 +1,10 @@
-# 🚀 Despliegue de Servicio Web en AWS EC2 con Docker Compose y HTTPS
+# Despliegue en AWS EC2 con Docker Compose y HTTPS
 
 Este documento resume los pasos para desplegar un servicio web Dockerizado en una instancia EC2 de AWS con dominio personalizado y HTTPS gratuito usando Let's Encrypt.
 
 ---
 
-## 🧩 Requisitos
+## Requisitos
 
 - Cuenta de AWS
 - Imagen Docker de tu app subida a Docker Hub
