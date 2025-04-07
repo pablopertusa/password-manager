@@ -65,7 +65,7 @@
         }
         .generate-btn {
             width: calc(100% - 170px);
-            font-size: 14px;
+            font-size: 15px;
             margin-top: 20px;
             background-color: #28a745;
         }
@@ -84,7 +84,11 @@
             <label for="password">Contraseña:</label>
             <input type="password" id="password" name="password" required>
 
-            <button type="button" class="generate-btn" onclick="generate()">Generar Contraseña Segura</button>
+            <div style="display: flex; gap: 10px;">
+                <button type="button" class="generate-btn" onclick="generate()">Generar Contraseña Segura</button>
+                <button type="button" class="generate-btn" style="background-color: #6c757d;" onclick="togglePassword()">Mostrar</button>
+            </div>
+
 
             <label for="passphrase">Frase Secreta:</label>
             <input type="password" id="passphrase" name="passphrase" required>
@@ -114,6 +118,17 @@
                 console.error(error);
             });
         }
+        function togglePassword() {
+                const input = document.getElementById('password');
+                const button = event.target;
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    button.textContent = 'Ocultar';
+                } else {
+                    input.type = 'password';
+                    button.textContent = 'Mostrar';
+                }
+            }
     </script>
 </body>
 </html>

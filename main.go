@@ -390,12 +390,12 @@ func main() {
 	}
 
 	// DESCOMENTAR PARA LA IMAGEN DOCKER
-	//err := os.Remove(".env")
-	//if err != nil {
-	//fmt.Println("No se pudo eliminar .env:", err)
-	//} else {
-	//fmt.Println(".env eliminado")
-	//}
+	err := os.Remove(".env")
+	if err != nil {
+		fmt.Println("No se pudo eliminar .env:", err)
+	} else {
+		fmt.Println(".env eliminado")
+	}
 
 	db, err := initDatabase()
 	if err != nil {
